@@ -751,7 +751,7 @@ def constrained_approx(Q, Wq, ncp, p, D=None, s=-1, I=None, Wd=None,
     return curve
 
 
-def curve_approx(Q, ncp, p, u_bar=None, U=None, plot_flag=True,
+def curve_approx(Q, ncp, p, u_bar=None, U=None, plot_flag=True, plot_extra=False,
                         knot_spacing='adaptive', param_method='centripetal'):
     """
     Spline curve approximation.
@@ -780,7 +780,7 @@ def curve_approx(Q, ncp, p, u_bar=None, U=None, plot_flag=True,
         if np.all(np.isclose(np.diff(Q, axis=0) , 0)):
             knot_spacing = 'even_approx'
         U = distribute_knots(u_bar, p, n_knts, Q=Q, method=knot_spacing, 
-                                plot_flag=plot_flag)
+                                plot_flag=plot_extra)
 
     # Initialise a spline curve with degree and knot vector
     curve = BSplineCurve(p, U)

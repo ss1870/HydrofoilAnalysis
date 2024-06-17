@@ -200,6 +200,7 @@ def spanwise_geom(wing, ncs, tip_thick, span_spacing='cosspace',
     LEf         = interp1d(wing.x, wing.LE, axis=0)
     TEf         = interp1d(wing.x, wing.TE, axis=0)
     ref_axisf   = interp1d(wing.x, wing.ref_axis, axis=0)
+    qcf         = interp1d(wing.x, wing.qu_chord_loc, axis=0)
     t2cf        = interp1d(wing.x, wing.t2c_distribution, axis=0)
     washoutf    = interp1d(wing.x, wing.washout_curve, axis=0)
 
@@ -214,6 +215,7 @@ def spanwise_geom(wing, ncs, tip_thick, span_spacing='cosspace',
 
     ## Interpolate LE, TE, ref_axis, t2c, washout on new spanwise grid
     ref_axis    = ref_axisf(x_interp)
+    qc          = qcf(x_interp)
     t2c         = t2cf(x_interp)
     washout     = washoutf(x_interp)
     LE          = LEf(x_interp)
@@ -237,14 +239,17 @@ def spanwise_geom(wing, ncs, tip_thick, span_spacing='cosspace',
         elif span_spacing == 'linspace':
             x_interp = np.linspace(x_cut_off0, np.abs(x_cut_off), ncs)
         # Reinterpolate geometrical parameters on new shorter xgrid
-        ref_axis = ref_axisf(x_interp)
-        t2c = t2cf(x_interp)
-        washout = washoutf(x_interp)
-        LE = LEf(x_interp)
-        TE = TEf(x_interp)
-        chord = np.linalg.norm(LE - TE, axis=1) # compute chord
+        ref_axis    = ref_axisf(x_interp)
+        qc          = qcf(x_interp)
+        t2c         = t2cf(x_interp)
+        washout     = washoutf(x_interp)
+        LE          = LEf(x_interp)
+        TE          = TEf(x_interp)
+        chord       = np.linalg.norm(LE - TE, axis=1) # compute chord
     method = np.zeros((ncs, 1))
 
+
+    x = x_interp
     if add_socket:
         # Define keypoints with fixed types at desired x locations
         KPs = np.array([
@@ -328,13 +333,14 @@ def spanwise_geom(wing, ncs, tip_thick, span_spacing='cosspace',
 
         # Re-interp geometry on new spanwise spacing
         ref_axis    = ref_axisf(x)
+        qc          = qcf(x)
         t2c         = t2cf(x)
         washout     = washoutf(x)
         LE          = LEf(x)
         TE          = TEf(x)
         chord       = np.linalg.norm(LE - TE, axis=1) # compute chord
 
-    return x, ref_axis, chord, t2c, washout, method
+    return x, ref_axis, chord, t2c, washout, method, qc
 
 def add_socket_2_coords(coords, le_id, SS_attach_id, ncs_pts,
             TE_thick, method=0, datum=None, add_radius=True,

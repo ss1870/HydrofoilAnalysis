@@ -53,7 +53,7 @@ print('Number of spanwise points = ', str(ncs))
 ## Create spanwise geometry inputs i.e. chord, t2c, washout, ref axis
 (x, ref_axis, 
     chord, t2c, 
-    washout, method) = ex.spanwise_geom(wing, ncs, tip_thick, 
+    washout, method, qc) = ex.spanwise_geom(wing, ncs, tip_thick, 
                                     span_spacing='linspace', 
                                     add_socket=True, 
                                     half=True, x_tuck_te=0.017)
