@@ -1,0 +1,226 @@
+function VPPDefinition(spec) {
+
+  var R = bicObj(spec);
+
+  R.merge("Version", 8);
+
+  // SETUP
+
+  R.merge("", {
+    "ForceReportFrameName": "Foil.FrameWaterPlane",
+    "MassReportFrameName": "Foil.Frame",
+
+    "Blocks": {
+      "InertialFrame": BL.DatumFrame()
+    }
+  });
+
+  // CONFIGURATION
+
+  R.merge("DefaultConfiguration", {
+    // "Foil"   : "foil06-57"
+    "Foil"   : "frontWing"
+  });
+
+  filelist(spec.ownPath, ["*.foil"]).forEach(function(fileName) {
+    var foilName = fileName.substr(0, fileName.indexOf('.'));
+    R.merge('Configurations.Foil.' + foilName + '.Blocks.Foil.Block', {
+      "File" : spec.ownPath + fileName
+    });
+  });
+
+  // MODEL
+
+  R.merge("Blocks.Foil", {
+    "x": BL.State({Init: 0}),
+    "y": BL.State({Init: 0}),
+    "z": BL.State({Init: 2.2 - 0.102860668}),
+    "z": BL.State({Init: 0}),
+
+    "e": BL.State({Init: 0}),
+    "f": BL.State({Init: 0}),
+    "g": BL.State({Init: 0}),
+
+    "u": BL.State({Init: 15}),
+    "v": BL.State({Init: 0}),
+    "w": BL.State({Init: 0}),
+
+    "p": BL.State({Init: 0}),
+    "q": BL.State({Init: 0}),
+    "r": BL.State({Init: 0}),
+
+    "Body": BL.RigidBody({
+      Inputs : {
+        "FM"   : "{FM}",
+      }
+    }),
+    "FM": BL.ForceSum({TargetFrame: "{Frame}"}),
+    "Mass": BL.MassSum({TargetFrame: "{Frame}"}),
+
+    "Ocean" : BL.FlatOcean("Materials/OceanTrans.material.xml"),
+
+    "Frame": BL.FrameXEUPfromDatum({
+      Translation: "[{x}, {y}, {z}]",
+      EulerXYZ: "[{e}, {f}, {g}]",
+      LinearVelocity: "[{u}, {v}, {w}]",
+      AngularVelocity: "[{p}, {q}, {r}]",
+    }),
+    "FrameWaterPlane": BL.FrameProjectToInertialZ({ R: [0, 0, 0], }),
+
+    "WingRake" : BL.State({Init: 0, Min : -5 , Max : 5, Optimise : false}),
+    "WingYaw"  : [0],
+
+    "Cant" : BL.State({Init: 0,  Min : 0, Max :  120, Derivative : "{CantDot}"}),
+    "CantDot"  : BL.State({Init: 0}),
+
+    "Block": BL.Foilboc({
+      "AddToFoilHolder": true,
+      "Reflect": false,
+
+      "Inputs": {
+        "FoilExt"  : 0,
+        "FoilYaw"  : 0,
+        "FoilCant" : "{Cant}",
+        "FoilRake" : 0,
+        // "FoilExtDot": 0,
+        "FoilYawDot"  : 0,
+        "FoilCantDot" : "{CantDot}",
+        "FoilRakeDot" : 0,
+        "SpanwiseElementRotation": "{WingYaw}",
+      },
+      "HasSpanwiseElementRotationInput"  : true,
+
+      // "ExtraOutputs": ["WingIB_UpperStrain", "WingIB_LowerStrain",
+      //             "WingOB_UpperStrain", "WingOB_LowerStrain",
+      //             "Arm_UpperStrain", "Arm_LowerStrain"],
+      "SpanwiseOutputStations": {
+        "FrontWingStbd": [0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.00, 2.1, 2.16],
+        // "FrontWingPort": "FrontWingStbd",
+    },
+
+      // "Bearings" : {
+      "Bearings" : {
+        "Type"    : "Rotating01",
+        "rLBAxis" : [0, 0, 0],
+        "rUBAxis" : [0, 0, 0],
+        "eLBCh"   : [ 1.0000,  0.0000,  0.0000],
+        "rRotC"   : [0, 0, 0],
+        "eCant"   : [ 1.000,  0.0000,  0.0000],
+        "eRake"   : [  0.000, 1.0000,  0.0000],
+        "eYaw"    : [  0.000, 0.0, 1.0],
+        "sLBHull" : 0.0,
+        "sUBMin"   : 0.0, // Sliding
+      },
+
+      "Analysis": {
+        "Hydro" : {
+          "Type" : "Weissinger",
+          "Mirror": "Froude",
+          // "Mirror"   : 0.0,
+          "kViscous" : 1.0,
+          "kSpray"   : 0.0,
+          "kInduced" : 1.0,
+          "kWaveLift" : 0.0,
+          "kWaveDrag" : 0.0,
+          "kCavLift" : 0.0,
+          "kCavDrag" : 0.0,
+          "kVentLift" : 0.0,
+          "Solver": {
+            "Type": "Linear",
+            "clStallOnset" : 1.1,
+            "clStallFull" : 2.3,
+          },
+          "Mesh" : {
+            "Unsweep" : false,
+        },
+
+        "Elements": {
+          //  "Arm": { "Mesh": { 'JunctionWeights' : 0, 'Spanwise': { 'Density': 10 }}},
+           "FrontWingStbd": { "Mesh": { 'Spanwise': { 'Density': 10 }}},
+          //  "WingOB": "WingIB"
+        },
+          // "cavitationSurfaceFile" : spec.bocPath + "../../xfoil/Cavitation01-03_gp.json",
+        },
+      },
+
+      "ForceReport"  : {"Type" : "PlaneIntersection", "r" : [0,0,0], "n" : [1, 0, 0]},
+    //   "@GraphicsNodes" : {
+    //     "Shape" : {
+    //         "Type"     : "FoilbocShape",
+    //         "Elements" : { FrontWingStbd : {nu:15, nv:60} },
+    //         "TextureProjection" : {
+    //             // Coordinates are the x,z coordinates in rondure frame of the image corners
+    //             // (it applies planar projection on xz-plane to get the texture coordinates u,v)
+    //             "TopLeft"     : [-0.4,  4],
+    //             "TopRight"    : [ 0.4,  4],
+    //             "BottomRight" : [ 0.4, -1],
+    //             "BottomLeft"  : [-0.4, -1],
+    //         },
+    //         "Material" : "Foil/Foil01.material.xml",
+    //         "Bearings" : { "Radius" : 0.01 },
+    //     },
+    // },
+    }),
+  });
+
+  // GRAPHICS
+
+
+  R.merge("Graphics", {
+    "SearchPaths": ["C:/VPPRoot/ac37/Graphics"],
+    "ModelSize": 0.5,
+    "AdditionalCameraPresets": {
+      "Orthographic": {
+        Type: "Orthographic",
+        Zoom: 1,
+        LookAtLocation: [0, 0, 0],
+        Yaw: 90,
+        BodyName: "Foil"
+      }
+    },
+    "DefaultCameraPreset": "Orthographic"
+  });
+
+  R.merge("Blocks.Foil", {
+    "@BodyGraphics": {}
+  });
+
+  R.merge("Blocks.Foil.Block", {
+    "@GraphicsNodes" : {
+      "Shape": {
+        "Type": "FoilbocShape",
+        "TextureProjection": {
+          "TopLeft": [-0.4, 4],
+          "TopRight": [0.4, 4],
+          "BottomRight": [0.4, -1],
+          "BottomLeft": [-0.4, -1],
+        },
+        "Material": "FoilStripes.material.xml",
+        "Bearings" : { "Radius" : 0.01 },
+      },
+      "Cl" : {
+        "Type"     : "FoilbocAnalysis",
+        "Color": {
+          Map: {
+            Default:  "dimgrey",
+            Min:      "red",
+            0:        "white",
+            Max:      "red",
+          },
+          Channel : 'Cl',
+        }
+      },
+      "Mesh" : {
+        "Type": "FoilbocMesh",
+        // ShowMirror: true,
+        Elements: {
+          Arm: { Color: "darkblue" },
+          WingIB: { Color: "darkgreen" },
+          WingOB: { Color: "darkred" },
+        },
+      },
+    }
+  });
+
+  return R;
+}

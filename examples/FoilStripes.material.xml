@@ -1,0 +1,8 @@
+<Material>
+	<Shader source="Shaders/PBR.shader" />
+
+	<ShaderFlag name="_F02_AlbedoMap" />
+
+	<Sampler name="albedoMap" map="FoilStripes.png" sRGB="true" />
+	<Uniform name="roughness" a="0.2" />
+</Material>
